@@ -1,4 +1,4 @@
-name: IzaManagement CI Tests
+name: Symfony CI
 
 on:
   push:
@@ -7,43 +7,33 @@ on:
     branches: [ "main" ]
 
 jobs:
-  laravel-tests:
-    name: Run Laravel Tests
+  build_and_test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
-    - name: Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-        extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
-        coverage: none
+    # --- PASUL 1: Setarea fișierului .env ---
+    # Copiem fișierul .env.test, deoarece acesta este mediul de testare
+    - name: Create .env file
+      run: cp .env.test .env
 
-    - name: Copy .env
-      # Copiem explicit din subfolderul IzaMedApp în rădăcina de lucru a pasului următor
-      run: cp $GITHUB_WORKSPACE/IzaMedApp/.env.production $GITHUB_WORKSPACE/IzaMedApp/.env
-
+    # --- PASUL 2: Instalarea dependențelor PHP ---
     - name: Install Composer Dependencies
-      # Rulăm comanda specificând calea către subfolder
-      working-directory: ./IzaMedApp
-      run: composer update --no-interaction --no-scripts --no-progress --prefer-dist
+      run: composer install --prefer-dist --no-progress
 
-    - name: Generate Application Key
-      working-directory: ./IzaMedApp
-      run: php artisan key:generate
+    # --- PASUL 3: Instalarea dependențelor Node.js și compilarea asset-urilor ---
+    - name: Install Node.js dependencies
+      run: npm install
 
-    - name: Create SQLite Database
-      working-directory: ./IzaMedApp
+    - name: Build frontend assets
+      run: npm run build
+
+    # --- PASUL 4: Crearea bazei de date și rularea testelor ---
+    - name: Create Database and Schema
       run: |
-        mkdir -p database
-        touch database/database.sqlite
+        php bin/console doctrine:database:create --env=test
+        php bin/console doctrine:schema:create --env=test
 
-    - name: Execute Tests (PHPUnit)
-      working-directory: ./IzaMedApp
-      env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite # Calea este acum relativă la working-directory
-      run: vendor/bin/phpunit
+    - name: Run Tests (PHPUnit)
+      run: php bin/phpunit
