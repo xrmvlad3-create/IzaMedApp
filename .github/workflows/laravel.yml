@@ -1,4 +1,4 @@
-name: IzaManagement CI
+name: IzaManagement Laravel CI
 
 on:
   push:
@@ -8,41 +8,44 @@ on:
 
 jobs:
   laravel-tests:
+    name: Build and Test Laravel Application
     runs-on: ubuntu-latest
     
     steps:
+    # 1. Descarcă codul
     - name: Checkout Code
       uses: actions/checkout@v3
 
+    # 2. Setează mediul PHP
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
         extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
 
-    - name: Copy .env file
-      # Copiem explicit din subfolderul unde știm că se află fișierul
-      run: cp IzaMedApp/.env.production IzaMedApp/.env
-
-    - name: Install Composer Dependencies
-      # Rulăm comanda specificând directorul de lucru
+    # 3. Muta-te în directorul proiectului și rulează toate comenzile de acolo
+    - name: Run all commands within the project directory
+      # Specificăm directorul de lucru pentru acest pas complex
       working-directory: ./IzaMedApp
-      run: composer install --prefer-dist --no-progress
-
-    - name: Install Node.js dependencies
-      working-directory: ./IzaMedApp
-      run: npm install
-
-    - name: Build frontend assets
-      working-directory: ./IzaMedApp
-      run: npm run build
-
-    - name: Run Laravel Tests
-      working-directory: ./IzaMedApp
-      env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
       run: |
+        # Pasul A: Copiază fișierul .env
+        echo "Creating .env file..."
+        cp .env.production .env
+        
+        # Pasul B: Instalează dependențele Composer
+        echo "Installing Composer dependencies..."
+        composer install --prefer-dist --no-progress --no-scripts
+        
+        # Pasul C: Instalează dependențele Node.js
+        echo "Installing Node.js dependencies..."
+        npm install
+        
+        # Pasul D: Compilează asset-urile frontend
+        echo "Building frontend assets..."
+        npm run build
+        
+        # Pasul E: Pregătește baza de date și rulează testele
+        echo "Running Laravel tests..."
         php artisan key:generate
         touch database/database.sqlite
         php artisan migrate --force
