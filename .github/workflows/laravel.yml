@@ -1,4 +1,4 @@
-name: Symfony Project CI
+name: IzaManagement Laravel CI
 
 on:
   push:
@@ -7,43 +7,46 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  laravel-tests:
+    name: Build and Test Application
     runs-on: ubuntu-latest
-
+    
     steps:
-    # Pasul 1: Clonează repository-ul
-    - name: Checkout code
+    # 1. Descarcă codul
+    - name: Checkout Code
       uses: actions/checkout@v3
 
-    # Pasul 2: Creează fișierul .env.test din secret
-    # Asigurați-vă că ați creat secretul 'DOT_ENV_TEST' în setările repository-ului
-    - name: Create .env.test file
-      run: echo "${{ secrets.DOT_ENV_TEST }}" > .env.test
-      shell: bash
+    # 2. Setează mediul PHP
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
 
-    # Pasul 3: Copiază fișierul de test în .env pentru a fi folosit de Symfony
-    - name: Copy .env.test to .env
-      run: cp .env.test .env
-      shell: bash
-
-    # Pasul 4: Instalează dependențele PHP cu Composer
-    - name: Install Composer Dependencies
-      run: composer install --prefer-dist --no-progress --no-scripts
-
-    # Pasul 5: Instalează dependențele Node.js
-    - name: Install Node.js Dependencies
-      run: npm install
-
-    # Pasul 6: Compilează asset-urile frontend
-    - name: Build Frontend Assets
-      run: npm run build
-
-    # Pasul 7: Pregătește baza de date de testare
-    - name: Create Database and Schema
+    # 3. Rulează toate comenzile din interiorul subfolderului IzaMedApp
+    - name: Run Build and Test Steps
+      # Această linie este cheia: îi spunem să execute tot ce urmează din interiorul folderului corect
+      working-directory: ./IzaMedApp
       run: |
-        php bin/console doctrine:database:create --env=test
-        php bin/console doctrine:schema:create --env=test
-      
-    # Pasul 8: Rulează testele PHPUnit
-    - name: Execute Tests (PHPUnit)
-      run: ./vendor/bin/phpunit
+        # Pasul A: Copiază fișierul .env
+        echo "Creating .env file from .env.production..."
+        cp .env.production .env
+        
+        # Pasul B: Instalează dependențele Composer
+        echo "Installing Composer dependencies..."
+        composer install --prefer-dist --no-progress --no-scripts
+        
+        # Pasul C: Instalează dependențele Node.js
+        echo "Installing Node.js dependencies..."
+        npm install
+        
+        # Pasul D: Compilează asset-urile frontend
+        echo "Building frontend assets..."
+        npm run build
+        
+        # Pasul E: Pregătește baza de date și rulează testele
+        echo "Running Laravel tests..."
+        php artisan key:generate
+        touch database/database.sqlite
+        php artisan migrate --force
+        vendor/bin/phpunit
