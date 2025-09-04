@@ -1,4 +1,4 @@
-name: IzaManagement Laravel CI
+name: IzaManagement CI
 
 on:
   push:
@@ -8,47 +8,40 @@ on:
 
 jobs:
   laravel-tests:
-    name: Build and Test Laravel Application
     runs-on: ubuntu-latest
     
-    # Setează directorul de lucru dacă proiectul este într-un subfolder
-    defaults:
-      run:
-        working-directory: ./IzaMedApp 
-        # ATENȚIE: Șterge întreaga secțiune 'defaults' dacă proiectul NU este în subfolderul 'IzaMedApp'
-
     steps:
-    # Pasul 1: Descarcă codul din repository
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    # Pasul 2: Setează mediul PHP cu extensiile necesare
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
         extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
-        coverage: none
 
-    # Pasul 3: Copiază fișierul de mediu
-    - name: Create .env file
-      run: php -r "file_exists('.env') || copy('.env.production', '.env');"
+    - name: Copy .env file
+      # Copiem explicit din subfolderul unde știm că se află fișierul
+      run: cp IzaMedApp/.env.production IzaMedApp/.env
 
-    # Pasul 4: Instalează dependențele PHP cu Composer
     - name: Install Composer Dependencies
-      run: composer install --prefer-dist --no-progress --no-scripts
+      # Rulăm comanda specificând directorul de lucru
+      working-directory: ./IzaMedApp
+      run: composer install --prefer-dist --no-progress
 
-    # Pasul 5: Instalează dependențele Node.js și compilează asset-urile
     - name: Install Node.js dependencies
+      working-directory: ./IzaMedApp
       run: npm install
+
     - name: Build frontend assets
+      working-directory: ./IzaMedApp
       run: npm run build
 
-    # Pasul 6: Pregătește și rulează testele Laravel
     - name: Run Laravel Tests
+      working-directory: ./IzaMedApp
       env:
         DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite # Calea este relativă la working-directory
+        DB_DATABASE: database/database.sqlite
       run: |
         php artisan key:generate
         touch database/database.sqlite
