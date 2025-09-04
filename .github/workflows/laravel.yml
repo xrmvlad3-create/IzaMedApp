@@ -10,6 +10,12 @@ jobs:
   laravel-tests:
     name: Run Laravel Tests
     runs-on: ubuntu-latest
+    
+    # Aici este magia: îi spunem să ruleze TOȚI pașii în sub-folder
+    defaults:
+      run:
+        working-directory: ./IzaMedApp
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -25,7 +31,7 @@ jobs:
       run: php -r "file_exists('.env') || copy('.env.production', '.env');"
 
     - name: Install Composer Dependencies
-      # Folosim 'update' pentru a genera un composer.lock nou, compatibil cu mediul de CI
+      # Folosim 'update' pentru a evita conflictele de platformă din composer.lock
       run: composer update --no-interaction --no-scripts --no-progress --prefer-dist
 
     - name: Generate Application Key
@@ -39,5 +45,5 @@ jobs:
     - name: Execute Tests (PHPUnit)
       env:
         DB_CONNECTION: sqlite
-        DB_DATABASE: ${{ github.workspace }}/database/database.sqlite
+        DB_DATABASE: ${{ github.workspace }}/IzaMedApp/database/database.sqlite
       run: vendor/bin/phpunit
