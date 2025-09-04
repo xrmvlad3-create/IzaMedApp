@@ -10,38 +10,43 @@ jobs:
   laravel-tests:
     name: Build and Test Application
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    # 1. Descarcă codul
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
+    # 2. Setează mediul PHP
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
 
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Create .env from .env.production
-        run: |
-          echo "Creating .env file from .env.production..."
-          cp .env.production .env
-
-      - name: Install Composer deps
-        run: composer install --prefer-dist --no-progress --no-scripts --no-interaction
-
-      - name: Install Node deps & build frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Prepare DB & Run Tests
-        run: |
-          php artisan key:generate
-          touch database/database.sqlite
-          php artisan migrate --force
-          vendor/bin/phpunit --stop-on-failure
+    # 3. Rulează toate comenzile direct în subfolder
+    - name: Build and Test Project
+      # Specificăm directorul de lucru pentru întregul script
+      working-directory: ./IzaMedApp
+      run: |
+        # Pasul A: Copiază fișierul .env
+        echo "Pasul A: Se creează fișierul .env..."
+        cp .env.production .env
+        
+        # Pasul B: Instalează dependențele Composer
+        echo "Pasul B: Se instalează dependențele Composer..."
+        composer install --prefer-dist --no-progress --no-scripts
+        
+        # Pasul C: Instalează dependențele Node.js
+        echo "Pasul C: Se instalează dependențele Node.js..."
+        npm install
+        
+        # Pasul D: Compilează asset-urile frontend
+        echo "Pasul D: Se compilează asset-urile frontend..."
+        npm run build
+        
+        # Pasul E: Pregătește baza de date și rulează testele
+        echo "Pasul E: Se pregătește baza de date și se rulează testele..."
+        php artisan key:generate
+        touch database/database.sqlite
+        php artisan migrate --force
+        vendor/bin/phpunit
