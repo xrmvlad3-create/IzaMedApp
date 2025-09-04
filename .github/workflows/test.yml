@@ -9,42 +9,20 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      # Clonează repo-ul
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Verifică structura (pentru debug)
       - name: List files
         run: ls -la && ls -la resources/js
 
-      # Instalează backend PHP (dacă ai composer.json în root)
-      - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress --no-interaction || echo "No composer.json, skipping"
-
-      # Instalează frontend (în resources/js, unde e package.json)
       - name: Install Node.js dependencies
         working-directory: ./resources/js
         run: npm install
 
-      # Build frontend
       - name: Build frontend
         working-directory: ./resources/js
-        run: npm run build || echo "No build script, skipping"
+        run: npm run build
 
-      # Testează Docker (validare docker-compose.yml)
       - name: Validate Docker Compose
         run: docker-compose config
-
-      # Rulează scripturi custom (ex. deployment.sh)
-      - name: Run deployment script
-        run: chmod +x deployment.sh && ./deployment.sh || echo "Script optional, skipping"
-
-      # Teste suplimentare (ex. sintaxă PHP)
-      - name: Check PHP syntax
-        run: find app -name "*.php" -exec php -l {} \;
-
-      # Dacă ai teste AI, adaugă curl la Ollama
-      - name: Test AI service
-        run: curl http://localhost:11434/api/generate -d '{"model": "llama3.1:8b", "prompt": "Test"}' || echo "AI test optional"
