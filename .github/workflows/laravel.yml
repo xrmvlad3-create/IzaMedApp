@@ -1,4 +1,4 @@
-name: IzaManagement Laravel CI - Final Attempt
+name: IzaManagement Laravel CI
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   laravel-tests:
-    name: Build and Test Application
+    name: Build and Test in Subfolder
     runs-on: ubuntu-latest
     
     steps:
@@ -23,33 +23,30 @@ jobs:
         php-version: '8.2'
         extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
 
-    # 3. Afișează structura de fișiere pentru depanare
-    - name: List files in workspace
-      run: ls -R
-
-    # 4. Copiază .env
+    # 3. Copiază fișierul .env explicit
     - name: Create .env file
       run: cp IzaMedApp/.env.production IzaMedApp/.env
 
-    # 5. Instalează dependențele Composer
+    # 4. Instalează dependențele Composer specificând calea
     - name: Install Composer Dependencies
-      run: composer install --prefer-dist --no-progress --no-scripts -d IzaMedApp/
+      run: composer install --prefer-dist --no-progress --no-scripts -d ./IzaMedApp
+
+    # 5. Instalează dependențele Node.js specificând calea
+    - name: Install Node.js Dependencies
+      run: npm install --prefix ./IzaMedApp
+    
+    # 6. Compilează asset-urile frontend specificând calea
+    - name: Build Frontend Assets
+      run: npm run build --prefix ./IzaMedApp
       
-    # 6. Instalează dependențele Node.js
-    - name: Install Node.js dependencies
-      run: npm install --prefix IzaMedApp/
-
-    # 7. Compilează asset-urile
-    - name: Build frontend assets
-      run: npm run build --prefix IzaMedApp/
-
-    # 8. Rulează testele Laravel
+    # 7. Rulează testele Laravel
     - name: Run Laravel Tests
+      # Schimbăm directorul de lucru doar pentru acest pas complex
+      working-directory: ./IzaMedApp
       env:
         DB_CONNECTION: sqlite
-        DB_DATABASE: IzaMedApp/database/database.sqlite
+        DB_DATABASE: database/database.sqlite
       run: |
-        cd IzaMedApp
         php artisan key:generate
         touch database/database.sqlite
         php artisan migrate --force
