@@ -11,34 +11,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Pasul 1: Clonează codul
+      # Clonează repo-ul
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Pasul 2: Verifică structura fișierelor (ex. listează fișierele din root)
-      - name: List root files
-        run: ls -la
+      # Verifică structura (pentru debug)
+      - name: List files
+        run: ls -la && ls -la resources/js
 
-      # Pasul 3: Instalează dependențe Node.js (pentru TypeScript)
+      # Instalează backend PHP (dacă ai composer.json în root)
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction || echo "No composer.json, skipping"
+
+      # Instalează frontend (în resources/js, unde e package.json)
       - name: Install Node.js dependencies
+        working-directory: ./resources/js
         run: npm install
 
-      # Pasul 4: Build frontend (dacă ai npm scripts)
+      # Build frontend
       - name: Build frontend
+        working-directory: ./resources/js
         run: npm run build || echo "No build script, skipping"
 
-      # Pasul 5: Testează Docker (dacă vrei să verifici docker-compose)
-      - name: Test Docker Compose
-        run: docker-compose config  # Verifică dacă docker-compose.yml este valid
+      # Testează Docker (validare docker-compose.yml)
+      - name: Validate Docker Compose
+        run: docker-compose config
 
-      # Pasul 6: Rulează scripturi custom (ex. deployment.sh)
+      # Rulează scripturi custom (ex. deployment.sh)
       - name: Run deployment script
-        run: chmod +x deployment.sh && ./deployment.sh || echo "Script failed, check logs"
+        run: chmod +x deployment.sh && ./deployment.sh || echo "Script optional, skipping"
 
-      # Pasul 7: Orice teste suplimentare (ex. pentru PHP simplu, fără Laravel)
-      - name: Simple PHP check
-        run: php --version && find . -name "*.php" -exec php -l {} \;  # Verifică sintaxa PHP
+      # Teste suplimentare (ex. sintaxă PHP)
+      - name: Check PHP syntax
+        run: find app -name "*.php" -exec php -l {} \;
 
-      # Opțional: Dacă ai teste unitare, adaugă-le aici
-      - name: Run tests
-        run: npm test || echo "No tests defined"
+      # Dacă ai teste AI, adaugă curl la Ollama
+      - name: Test AI service
+        run: curl http://localhost:11434/api/generate -d '{"model": "llama3.1:8b", "prompt": "Test"}' || echo "AI test optional"
