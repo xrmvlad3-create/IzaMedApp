@@ -1,4 +1,4 @@
-name: IzaManagement Laravel CI
+name: Symfony Project CI/CD
 
 on:
   push:
@@ -7,47 +7,38 @@ on:
     branches: [ "main" ]
 
 jobs:
-  laravel-tests:
-    name: Build and Test in Subfolder
+  build-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    # 1. Descarcă codul
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      # Pasul 1: Clonează codul în directorul de lucru
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    # 2. Setează mediul PHP
-    - name: Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-        extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
-
-    # 3. Copiază fișierul .env explicit
-    - name: Create .env file
-      run: cp IzaMedApp/.env.production IzaMedApp/.env
-
-    # 4. Instalează dependențele Composer specificând calea
-    - name: Install Composer Dependencies
-      run: composer install --prefer-dist --no-progress --no-scripts -d ./IzaMedApp
-
-    # 5. Instalează dependențele Node.js specificând calea
-    - name: Install Node.js Dependencies
-      run: npm install --prefix ./IzaMedApp
-    
-    # 6. Compilează asset-urile frontend specificând calea
-    - name: Build Frontend Assets
-      run: npm run build --prefix ./IzaMedApp
+      # Pasul 2: Setează mediul de testare folosind secrete
+      # Asigurați-vă că ați creat secretul 'DOT_ENV_TEST' în setările repository-ului
+      - name: Create .env file for testing
+        run: echo "${{ secrets.DOT_ENV_TEST }}" > .env
       
-    # 7. Rulează testele Laravel
-    - name: Run Laravel Tests
-      # Schimbăm directorul de lucru doar pentru acest pas complex
-      working-directory: ./IzaMedApp
-      env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
-      run: |
-        php artisan key:generate
-        touch database/database.sqlite
-        php artisan migrate --force
-        vendor/bin/phpunit
+      # Pasul 3: Instalează dependențele PHP
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      # Pasul 4: Instalează dependențele Node.js
+      - name: Install Node.js dependencies
+        run: npm install
+
+      # Pasul 5: Compilează asset-urile frontend
+      - name: Build frontend assets
+        run: npm run build
+
+      # Pasul 6: Pregătește baza de date pentru teste
+      # Folosim --env=test pentru a ne asigura că se folosesc setările din .env
+      - name: Setup Test Database
+        run: |
+          php bin/console doctrine:database:create --if-not-exists --env=test
+          php bin/console doctrine:schema:create --env=test
+
+      # Pasul 7: Rulează testele
+      - name: Run PHPUnit tests
+        run: ./vendor/bin/phpunit
