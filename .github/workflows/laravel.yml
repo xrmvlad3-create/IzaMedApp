@@ -1,4 +1,4 @@
-name: Symfony CI
+name: IzaManagement Laravel CI
 
 on:
   push:
@@ -7,33 +7,50 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build_and_test:
+  laravel-tests:
+    name: Build and Test Laravel Application
     runs-on: ubuntu-latest
+    
+    # Setează directorul de lucru dacă proiectul este într-un subfolder
+    defaults:
+      run:
+        working-directory: ./IzaMedApp 
+        # ATENȚIE: Șterge întreaga secțiune 'defaults' dacă proiectul NU este în subfolderul 'IzaMedApp'
 
     steps:
-    - uses: actions/checkout@v3
+    # Pasul 1: Descarcă codul din repository
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-    # --- PASUL 1: Setarea fișierului .env ---
-    # Copiem fișierul .env.test, deoarece acesta este mediul de testare
+    # Pasul 2: Setează mediul PHP cu extensiile necesare
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
+        coverage: none
+
+    # Pasul 3: Copiază fișierul de mediu
     - name: Create .env file
-      run: cp .env.test .env
+      run: php -r "file_exists('.env') || copy('.env.production', '.env');"
 
-    # --- PASUL 2: Instalarea dependențelor PHP ---
+    # Pasul 4: Instalează dependențele PHP cu Composer
     - name: Install Composer Dependencies
-      run: composer install --prefer-dist --no-progress
+      run: composer install --prefer-dist --no-progress --no-scripts
 
-    # --- PASUL 3: Instalarea dependențelor Node.js și compilarea asset-urilor ---
+    # Pasul 5: Instalează dependențele Node.js și compilează asset-urile
     - name: Install Node.js dependencies
       run: npm install
-
     - name: Build frontend assets
       run: npm run build
 
-    # --- PASUL 4: Crearea bazei de date și rularea testelor ---
-    - name: Create Database and Schema
+    # Pasul 6: Pregătește și rulează testele Laravel
+    - name: Run Laravel Tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite # Calea este relativă la working-directory
       run: |
-        php bin/console doctrine:database:create --env=test
-        php bin/console doctrine:schema:create --env=test
-
-    - name: Run Tests (PHPUnit)
-      run: php bin/phpunit
+        php artisan key:generate
+        touch database/database.sqlite
+        php artisan migrate --force
+        vendor/bin/phpunit
