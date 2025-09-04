@@ -10,43 +10,38 @@ jobs:
   laravel-tests:
     name: Build and Test Application
     runs-on: ubuntu-latest
-    
+
     steps:
-    # 1. Descarcă codul
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    # 2. Setează mediul PHP
-    - name: Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-        extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
 
-    # 3. Rulează toate comenzile din interiorul subfolderului IzaMedApp
-    - name: Run Build and Test Steps
-      # Această linie este cheia: îi spunem să execute tot ce urmează din interiorul folderului corect
-      working-directory: ./IzaMedApp
-      run: |
-        # Pasul A: Copiază fișierul .env
-        echo "Creating .env file from .env.production..."
-        cp .env.production .env
-        
-        # Pasul B: Instalează dependențele Composer
-        echo "Installing Composer dependencies..."
-        composer install --prefer-dist --no-progress --no-scripts
-        
-        # Pasul C: Instalează dependențele Node.js
-        echo "Installing Node.js dependencies..."
-        npm install
-        
-        # Pasul D: Compilează asset-urile frontend
-        echo "Building frontend assets..."
-        npm run build
-        
-        # Pasul E: Pregătește baza de date și rulează testele
-        echo "Running Laravel tests..."
-        php artisan key:generate
-        touch database/database.sqlite
-        php artisan migrate --force
-        vendor/bin/phpunit
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Create .env from .env.production
+        run: |
+          echo "Creating .env file from .env.production..."
+          cp .env.production .env
+
+      - name: Install Composer deps
+        run: composer install --prefer-dist --no-progress --no-scripts --no-interaction
+
+      - name: Install Node deps & build frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Prepare DB & Run Tests
+        run: |
+          php artisan key:generate
+          touch database/database.sqlite
+          php artisan migrate --force
+          vendor/bin/phpunit --stop-on-failure
