@@ -2,7 +2,7 @@ name: IzaManagement CI Tests
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -11,16 +11,11 @@ jobs:
     name: Run Laravel Tests
     runs-on: ubuntu-latest
     
-    # Aici este magia: îi spunem să ruleze TOȚI pașii în sub-folder
-    defaults:
-      run:
-        working-directory: ./IzaMedApp
-
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Setup PHP with Extensions
+    - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
@@ -28,22 +23,27 @@ jobs:
         coverage: none
 
     - name: Copy .env
-      run: php -r "file_exists('.env') || copy('.env.production', '.env');"
+      # Copiem explicit din subfolderul IzaMedApp în rădăcina de lucru a pasului următor
+      run: cp $GITHUB_WORKSPACE/IzaMedApp/.env.production $GITHUB_WORKSPACE/IzaMedApp/.env
 
     - name: Install Composer Dependencies
-      # Folosim 'update' pentru a evita conflictele de platformă din composer.lock
+      # Rulăm comanda specificând calea către subfolder
+      working-directory: ./IzaMedApp
       run: composer update --no-interaction --no-scripts --no-progress --prefer-dist
 
     - name: Generate Application Key
+      working-directory: ./IzaMedApp
       run: php artisan key:generate
 
     - name: Create SQLite Database
+      working-directory: ./IzaMedApp
       run: |
         mkdir -p database
         touch database/database.sqlite
 
     - name: Execute Tests (PHPUnit)
+      working-directory: ./IzaMedApp
       env:
         DB_CONNECTION: sqlite
-        DB_DATABASE: ${{ github.workspace }}/IzaMedApp/database/database.sqlite
+        DB_DATABASE: database/database.sqlite # Calea este acum relativă la working-directory
       run: vendor/bin/phpunit
