@@ -1,4 +1,4 @@
-name: IzaManagement Laravel CI
+name: IzaManagement Laravel CI - Final Attempt
 
 on:
   push:
@@ -23,29 +23,33 @@ jobs:
         php-version: '8.2'
         extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, tokenizer, xml, pdo_pgsql, dom, gd, soap, intl, zip, redis
 
-    # 3. Rulează toate comenzile direct în subfolder
-    - name: Build and Test Project
-      # Specificăm directorul de lucru pentru întregul script
-      working-directory: ./IzaMedApp
+    # 3. Afișează structura de fișiere pentru depanare
+    - name: List files in workspace
+      run: ls -R
+
+    # 4. Copiază .env
+    - name: Create .env file
+      run: cp IzaMedApp/.env.production IzaMedApp/.env
+
+    # 5. Instalează dependențele Composer
+    - name: Install Composer Dependencies
+      run: composer install --prefer-dist --no-progress --no-scripts -d IzaMedApp/
+      
+    # 6. Instalează dependențele Node.js
+    - name: Install Node.js dependencies
+      run: npm install --prefix IzaMedApp/
+
+    # 7. Compilează asset-urile
+    - name: Build frontend assets
+      run: npm run build --prefix IzaMedApp/
+
+    # 8. Rulează testele Laravel
+    - name: Run Laravel Tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: IzaMedApp/database/database.sqlite
       run: |
-        # Pasul A: Copiază fișierul .env
-        echo "Pasul A: Se creează fișierul .env..."
-        cp .env.production .env
-        
-        # Pasul B: Instalează dependențele Composer
-        echo "Pasul B: Se instalează dependențele Composer..."
-        composer install --prefer-dist --no-progress --no-scripts
-        
-        # Pasul C: Instalează dependențele Node.js
-        echo "Pasul C: Se instalează dependențele Node.js..."
-        npm install
-        
-        # Pasul D: Compilează asset-urile frontend
-        echo "Pasul D: Se compilează asset-urile frontend..."
-        npm run build
-        
-        # Pasul E: Pregătește baza de date și rulează testele
-        echo "Pasul E: Se pregătește baza de date și se rulează testele..."
+        cd IzaMedApp
         php artisan key:generate
         touch database/database.sqlite
         php artisan migrate --force
